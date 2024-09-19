@@ -9,7 +9,7 @@ terraform {
     }
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 4.16"
+      version = "~> 5.68"
     }
   }
 }
@@ -70,13 +70,30 @@ data "aws_availability_zones" "any" {
   state = "available"
 }
 
+/* VPC, trying the github module */
+
+module "learning_vpc" {
+  source = "terraform-aws-modules/vpc/aws"
+
+  name = "learning_vpc"
+  cidr = "10.0.0.0/16"
+
+  azs             = data.aws_availability_zones.any.zone_ids
+  private_subnets = ["10.0.1.0/24"]
+  public_subnets  = ["10.0.101.0/24"]
+
+  create_igw = true
+}
+
+/* EC2 */
+
 resource "aws_launch_template" "learning_template" {
   image_id      = data.aws_ami.latest_amzn.id
   instance_type = "t4g.nano"
 }
 
 resource "aws_autoscaling_group" "learning_asg" {
-  availability_zones = data.aws_availability_zones.any.names
+  vpc_zone_identifier = module.learning_vpc.public_subnets
   max_size = 1
   min_size = 0
   desired_capacity = var.asg_desired_capacity

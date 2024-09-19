@@ -14,7 +14,7 @@ Start by creating an S3 bucket, for example:
 aws s3api create-bucket --acl private --bucket learning-12345-terraform --create-bucket-configuration LocationConstraint=$AWS_REGION
 ```
 
-Then create a config for the Terraform backend:
+Initialize:
 
 ```bash
 cd tf
@@ -26,6 +26,12 @@ region = "$AWS_REGION"
 EOF
 
 terraform init --backend-config=backend.conf
+terraform get
+```
+
+Apply the plan:
+
+```bash
 terraform apply \
   -var "region=$AWS_REGION" \
   -var "asg_desired_capacity=1"
