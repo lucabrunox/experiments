@@ -14,9 +14,10 @@ terraform {
   }
 }
 
+/* Variables */
+
 variable "region" {
   type    = string
-  #default = "eu-west-1"
 }
 
 variable "asg_desired_capacity" {
@@ -28,42 +29,8 @@ provider "aws" {
   region = var.region
 }
 
-resource "aws_dynamodb_table" "learning_table" {
-  name           = "LearningTable"
-  billing_mode   = "PAY_PER_REQUEST"
-  hash_key       = "pk"
-  range_key      = "rk"
-
-  attribute {
-    name = "pk"
-    type = "S"
-  }
-
-  attribute {
-    name = "rk"
-    type = "S"
-  }
-
-  ttl {
-    attribute_name = "ttl"
-    enabled        = true
-  }
-
-  tags = {
-    Terraform   = "true"
-    Name        = "LearningTable"
-    Environment = "learning"
-  }
-}
-
-data "aws_ami" "latest_amzn" {
-  most_recent = true
-  owners      = ["amazon"]
-
-  filter {
-    name   = "name"
-    values = ["amzn2-ami-hvm-*-arm64-gp2"]
-  }
+variable "ssh_pub_key_file" {
+  default = "~/.ssh/id_rsa.pub"
 }
 
 data "aws_availability_zones" "any" {
@@ -85,31 +52,29 @@ module "learning_vpc" {
   create_igw = true
 }
 
-/* EC2 */
+/* EC2 user data */
 
-variable "ssh_pub_key_file" {
-  default = "~/.ssh/id_rsa.pub"
+resource "random_id" "learning_user_data_bucket_id" {
+  byte_length = 8
 }
 
-resource "aws_key_pair" "learning_key" {
-  key_name   = "learning_key"
-  public_key = file(var.ssh_pub_key_file)
+resource "aws_s3_bucket" "learning_s3_user_data" {
+  bucket_prefix = "learning-"
+  force_destroy = true
 }
+
+resource "aws_s3_object" "learning_user_data" {
+  bucket = aws_s3_bucket.learning_s3_user_data.bucket
+  for_each = fileset("${path.module}/user_data/", "*")
+  key = each.value
+  source = "${path.module}/user_data/${each.value}"
+  etag = filemd5("${path.module}/user_data/${each.value}")
+}
+
+/* EC2 role */
 
 resource "aws_iam_instance_profile" "learning_ec2_profile" {
   role = aws_iam_role.learning_ec2_role.name
-}
-
-resource "aws_launch_template" "learning_template" {
-  image_id      = data.aws_ami.latest_amzn.id
-  instance_type = "t4g.nano"
-  user_data = filebase64("${path.module}/user_data/user_data.sh")
-  key_name = aws_key_pair.learning_key.key_name
-  vpc_security_group_ids = [aws_security_group.learning_sg.id]
-
-  iam_instance_profile {
-    arn = aws_iam_instance_profile.learning_ec2_profile.arn
-  }
 }
 
 resource "aws_iam_role" "learning_ec2_role" {
@@ -130,6 +95,33 @@ resource "aws_iam_role" "learning_ec2_role" {
   ]
 }
 
+resource "aws_iam_role_policy" "learning_ec2_inline_policy" {
+  role = aws_iam_role.learning_ec2_role.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = [
+          "s3:GetObject",
+          "s3:ListBucket"
+        ]
+        Effect = "Allow"
+        Resource = [
+          aws_s3_bucket.learning_s3_user_data.arn,
+          "${aws_s3_bucket.learning_s3_user_data.arn}/*"
+        ]
+      }
+    ]
+  })
+}
+
+/* EC2 security */
+
+resource "aws_key_pair" "learning_key" {
+  key_name   = "learning_key"
+  public_key = file(var.ssh_pub_key_file)
+}
+
 resource "aws_security_group" "learning_sg" {
   vpc_id = module.learning_vpc.vpc_id
 
@@ -137,7 +129,7 @@ resource "aws_security_group" "learning_sg" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["80.233.0.0/16"]
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
@@ -145,6 +137,56 @@ resource "aws_security_group" "learning_sg" {
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+/* EC2 launch */
+
+data "aws_ami" "latest_amzn" {
+  most_recent = true
+  owners      = ["amazon"]
+
+  filter {
+    name   = "name"
+    values = ["amzn2-ami-hvm-*-arm64-gp2"]
+  }
+}
+
+locals {
+  user_data_hash = sha1(join("", [for f in fileset(path.module, "user_data/**") : filesha1("${path.module}/${f}")]))
+}
+
+resource "aws_launch_template" "learning_template" {
+  image_id      = data.aws_ami.latest_amzn.id
+  instance_type = "t4g.medium"
+  depends_on = [aws_s3_object.learning_user_data]
+
+  user_data = base64encode(<<EOF
+#!/bin/bash
+export HOME=/root
+mkdir /root/init
+cd /root/init
+# trigger: ${local.user_data_hash}
+aws s3 cp --recursive s3://${aws_s3_bucket.learning_s3_user_data.bucket}/ ./
+chmod +x init.sh
+./init.sh && rm -rf /root/init # keep init files around for debugging
+EOF
+  )
+
+  key_name = aws_key_pair.learning_key.key_name
+  vpc_security_group_ids = [aws_security_group.learning_sg.id]
+  block_device_mappings {
+    # swap
+    device_name = "/dev/sdf"
+    ebs {
+      volume_size = 8
+      volume_type = "gp3"
+      delete_on_termination = "true"
+    }
+  }
+
+  iam_instance_profile {
+    arn = aws_iam_instance_profile.learning_ec2_profile.arn
   }
 }
 
