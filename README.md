@@ -2,7 +2,7 @@
 
 This repo contains step-by-step creationg of low-level Terraform + K8s + other stuff for learning purposes.
 
-### Terraform to create a K8s cluster on EC2
+### Day 1: Set up Terraform with a remote backend
 
 Define the AWS region that will be used for all the commands:
 
@@ -41,15 +41,19 @@ terraform apply \
 
 Use asg_desired_capacity=0 to tear down the cluster.
 
-### Kubernetes single-node cluster on EC2 with kubeadm
+### Day 2: Kubernetes single-node cluster on EC2 with kubeadm
 
-Created a raw low-level simple K8s cluster on EC2 on a single master node. Some interesting facts:
+Commit: https://github.com/lucabrunox/learning/tree/9cc3ac81d7f835a7de5e69c58378381e20351fdd
+
+Using a raw K8s instead of EKS to learn some low-level details. Some interesting facts:
 
 - It takes 2 minutes and 20 second until all containers are in Running state.
 - A t4g.medium is needed to run a cluster. Using a t4g.nano with swap is not enough because the apiserver/etcd will keep timing out.
 - CoreDNS and kube-proxy addons are installed by default.
 - The advertising IP is coming from `ip route` and it coincides with the private IP of the instance rather than the public one.
-- Explanation of flannel networking: https://mvallim.github.io/kubernetes-under-the-hood/documentation/kube-flannel.html
+- Explanations of K8s networking:
+  - https://mvallim.github.io/kubernetes-under-the-hood/documentation/kube-flannel.html
+  - https://www.redhat.com/sysadmin/kubernetes-pods-communicate-nodes
 
 SSH into the EC2 instance and run crictl and kubectl commands to inspect the cluster:
 
@@ -67,3 +71,23 @@ If the cluster is not up check the instance init logs:
 ```bash
 sudo cat /var/log/cloud-init-output.log
 ```
+
+### Day 3: A Django frontend with GH action to build a Docker image, not deployed yet
+
+Set up following https://docs.djangoproject.com/en/5.1/intro/tutorial01/ with `django-admin startproject mysite`.
+
+The Dockerfile is self-explanatory. To try it out:
+
+```bash
+docker run -p 8000:8000 --rm -it $(docker build -q .)
+```
+
+Then open http://localhost:8000
+
+To test GH actions I've set up act to run in a Docker, so that it doesn't need to be installed:
+
+```bash
+./test_gh.sh
+```
+
+Which in turn creates the frontend Docker, yay!
