@@ -205,3 +205,77 @@ resource "aws_autoscaling_group" "learning_asg" {
   }
 }
 
+/* ECR */
+
+module "learning_ecr_frontend" {
+  source = "terraform-aws-modules/ecr/aws"
+
+  repository_name = "learning-frontend"
+
+  repository_lifecycle_policy = jsonencode({
+    rules = [
+      {
+        rulePriority = 1,
+        description  = "Keep only the last 3 images",
+        selection = {
+          tagStatus     = "tagged",
+          countType     = "imageCountMoreThan",
+          countNumber   = 3
+        },
+        action = {
+          type = "expire"
+        },
+      }
+    ]
+  })
+}
+
+/* GitHub */
+
+resource "aws_iam_policy" "learning_github_ecr" {
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = [
+          "ecr:CompleteLayerUpload",
+          "ecr:UploadLayerPart",
+          "ecr:InitiateLayerUpload",
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:PutImage",
+          "ecr:BatchGetImage"
+        ]
+        Effect = "Allow"
+        Resource = [
+          module.learning_ecr_frontend.repository_arn
+        ]
+      },
+      {
+        "Effect": "Allow",
+        "Action": "ecr:GetAuthorizationToken",
+        "Resource": "*"
+      }
+    ]
+  })
+}
+
+module "learning_github_oidc" {
+  source  = "terraform-module/github-oidc-provider/aws"
+  version = "~> 1"
+
+  create_oidc_provider = true
+  create_oidc_role     = true
+
+  repositories              = ["lucabrunox/learning"]
+  oidc_role_attach_policies = [aws_iam_policy.learning_github_ecr.arn]
+}
+
+/* Outputs */
+
+output "learning_github_oidc_role" {
+  value = module.learning_github_oidc.oidc_role
+}
+
+output "learning_ecr_frontend_repository_url" {
+  value = module.learning_ecr_frontend.repository_url
+}

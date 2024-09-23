@@ -43,7 +43,7 @@ Use asg_desired_capacity=0 to tear down the cluster.
 
 ### Day 2: Kubernetes single-node cluster on EC2 with kubeadm
 
-Commit: https://github.com/lucabrunox/learning/tree/9cc3ac81d7f835a7de5e69c58378381e20351fdd
+Commit: https://github.com/lucabrunox/learning/tree/9cc3ac81d7f
 
 Using a raw K8s instead of EKS to learn some low-level details. Some interesting facts:
 
@@ -74,6 +74,8 @@ sudo cat /var/log/cloud-init-output.log
 
 ### Day 3: A Django frontend with GH action to build a Docker image, not deployed yet
 
+Commit: https://github.com/lucabrunox/learning/tree/f7b44d852c7c
+
 Set up following https://docs.djangoproject.com/en/5.1/intro/tutorial01/ with `django-admin startproject mysite`.
 
 The Dockerfile is self-explanatory. To try it out:
@@ -91,3 +93,5 @@ To test GH actions I've set up act to run in a Docker, so that it doesn't need t
 ```
 
 Which in turn creates the frontend Docker, yay!
+
+The GH also contains a job to push to ECR, which is not tested locally.

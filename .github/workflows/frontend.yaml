@@ -1,7 +1,14 @@
-name: Frontend build
+name: Frontend
 
 on:
   push:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: eu-west-1
 
 jobs:
   build:
@@ -15,3 +22,37 @@ jobs:
         working-directory: frontend
         run: |
           docker build --rm . -t frontend
+          docker save -o /tmp/frontend_image.tar frontend
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: frontend_image
+          path: /tmp/frontend_image.tar
+
+  push:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-oidc-provider-aws
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Download artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: frontend_image
+          path: /tmp/
+
+      - name: Push to ECR
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/learning-frontend
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker load --input /tmp/frontend_image.tar
+          docker image tag frontend $REGISTRY/$REPOSITORY:$IMAGE_TAG
+          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
