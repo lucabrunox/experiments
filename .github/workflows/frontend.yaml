@@ -40,6 +40,7 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - uses: aws-actions/amazon-ecr-login@v2
+        id: login-ecr
 
       - name: Download artifact
         uses: actions/download-artifact@v2
