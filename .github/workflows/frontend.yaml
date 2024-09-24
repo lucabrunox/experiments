@@ -55,5 +55,5 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
         run: |
           docker load --input /tmp/frontend_image.tar
-          docker image tag frontend $REGISTRY/$REPOSITORY:$IMAGE_TAG
-          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+          docker image tag frontend $REPOSITORY:$IMAGE_TAG
+          docker push $REPOSITORY:$IMAGE_TAG
