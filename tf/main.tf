@@ -110,6 +110,21 @@ resource "aws_iam_role_policy" "learning_ec2_inline_policy" {
           aws_s3_bucket.learning_s3_user_data.arn,
           "${aws_s3_bucket.learning_s3_user_data.arn}/*"
         ]
+      },
+      {
+        Action = [
+          "ecr:BatchGetImage",
+          "ecr:GetDownloadUrlForLayer"
+        ]
+        Effect = "Allow"
+        Resource = [
+          module.learning_ecr_frontend.repository_arn
+        ]
+      },
+      {
+        "Effect": "Allow",
+        "Action": "ecr:GetAuthorizationToken",
+        "Resource": "*"
       }
     ]
   })
@@ -219,6 +234,7 @@ module "learning_ecr_frontend" {
         description  = "Keep only the last 3 images",
         selection = {
           tagStatus     = "tagged",
+          tagPrefixList = ["v"],
           countType     = "imageCountMoreThan",
           countNumber   = 3
         },

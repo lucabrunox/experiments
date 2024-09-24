@@ -4,6 +4,8 @@ This repo contains step-by-step creationg of low-level Terraform + K8s + other s
 
 ### Day 1: Set up Terraform with a remote backend
 
+Commit: https://github.com/lucabrunox/learning/tree/cd8378154c378
+
 Define the AWS region that will be used for all the commands:
 
 ```bash
@@ -72,9 +74,9 @@ If the cluster is not up check the instance init logs:
 sudo cat /var/log/cloud-init-output.log
 ```
 
-### Day 3: A Django frontend with GH action to build a Docker image, not deployed yet
+### Day 3: A Django frontend with GH action to build a Docker image and push to ECR
 
-Commit: https://github.com/lucabrunox/learning/tree/f7b44d852c7c
+Commit: https://github.com/lucabrunox/learning/tree/5216dfe5efd6
 
 Set up following https://docs.djangoproject.com/en/5.1/intro/tutorial01/ with `django-admin startproject mysite`.
 
@@ -95,3 +97,26 @@ To test GH actions I've set up act to run in a Docker, so that it doesn't need t
 Which in turn creates the frontend Docker, yay!
 
 The GH also contains a job to push to ECR, which is not tested locally.
+
+### Day 4: Deploy the Django app in K8s using the ECR image
+
+Commit: https://github.com/lucabrunox/learning/tree/e296b828cb5
+
+Needless to say that without EKS it's more complicated, but worth the learnings.
+
+Learnings:
+- Using CronJob to get AWS creds from the node, login to ECR, and store the secret for pulling images.
+- CronJob doesn't start immediately, need to wait a minute.
+- Need to untaint control plane node in other to schedule pods.
+- Need to build the frontend image for ARM, obviously.
+- Python app fails because it can't find the UTC timezone, needs tzdata.
+- Cannot change the matching labels of a K8s deployment.
+
+At the end we're able to execute the following kubectl on the EC2 instance to deploy the app and watch it working:
+
+```bash
+kubectl apply -f k8s/ecr-credentials.yaml
+kubectl apply -f frontend/k8s/manifest.yaml
+
+curl $(kubectl get svc frontend -o=jsonpath='{.spec.clusterIP}'):8000
+```
