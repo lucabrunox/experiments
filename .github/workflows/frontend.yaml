@@ -24,7 +24,7 @@ jobs:
           docker build --rm . -t frontend
           docker save -o /tmp/frontend_image.tar frontend
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v4
         with:
           name: frontend_image
           path: /tmp/frontend_image.tar
@@ -43,7 +43,7 @@ jobs:
         id: login-ecr
 
       - name: Download artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: frontend_image
           path: /tmp/
