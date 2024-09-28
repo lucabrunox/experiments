@@ -25,6 +25,11 @@ variable "asg_desired_capacity" {
   default = 1
 }
 
+variable "nlb_enabled" {
+  type = bool
+  default = false
+}
+
 provider "aws" {
   region = var.region
 }
@@ -45,8 +50,8 @@ module "learning_vpc" {
   cidr = "10.0.0.0/16"
 
   azs             = data.aws_availability_zones.any.zone_ids
-  private_subnets = ["10.0.1.0/24"]
-  public_subnets  = ["10.0.101.0/24"]
+  private_subnets = ["10.0.1.0/24", "10.0.2.0/24"]
+  public_subnets  = ["10.0.101.0/24", "10.0.102.0/24"]
 
   map_public_ip_on_launch = true
   create_igw = true
@@ -147,6 +152,13 @@ resource "aws_security_group" "learning_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  ingress {
+    from_port   = 30000
+    to_port     = 30000
+    protocol    = "tcp"
+    security_groups = [module.learning_nlb.security_group_id]
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -214,9 +226,64 @@ resource "aws_autoscaling_group" "learning_asg" {
     strategy = "Rolling"
   }
 
+  target_group_arns = [for group in module.learning_nlb.target_groups: group.arn]
+
   launch_template {
     id      = aws_launch_template.learning_template.id
     version = aws_launch_template.learning_template.latest_version
+  }
+}
+
+/* NLB */
+
+module "learning_nlb" {
+  source = "terraform-aws-modules/alb/aws"
+  create = var.nlb_enabled
+  load_balancer_type = "network"
+  vpc_id = module.learning_vpc.vpc_id
+  subnets = aws_autoscaling_group.learning_asg.vpc_zone_identifier
+  enable_deletion_protection = false
+
+  listeners = [
+    {
+      port = 80
+      protocol = "TCP"
+      forward = {
+        target_group_key = "learning"
+      }
+    }
+  ]
+
+  target_groups = {
+    learning = {
+      name_prefix = "learn-"
+      protocol = "TCP"
+      port = 30000
+      target_type = "instance"
+      create_attachment = false
+      health_check = {
+        protocol = "HTTP"
+        port = 30000
+        path = "/"
+        matcher = "200-399"
+      }
+    }
+  }
+
+  security_group_ingress_rules = {
+    all_tcp = {
+      from_port   = 80
+      to_port     = 80
+      ip_protocol = "tcp"
+      cidr_ipv4   = "0.0.0.0/0"
+    }
+  }
+
+  security_group_egress_rules = {
+    all = {
+      ip_protocol = "-1"
+      cidr_ipv4   = module.learning_vpc.vpc_cidr_block
+    }
   }
 }
 
@@ -294,4 +361,8 @@ output "learning_github_oidc_role" {
 
 output "learning_ecr_frontend_repository_url" {
   value = module.learning_ecr_frontend.repository_url
+}
+
+output "learning_nlb_dns_name" {
+  value = module.learning_nlb.dns_name
 }

@@ -18,6 +18,7 @@ spec:
         - name: ecrsecret
       containers:
         - name: frontend
+          tty: true
           image: MY_ACCOUNT.dkr.ecr.eu-west-1.amazonaws.com/learning-frontend:ve296b828cb5109a608881efa9fe5bf208d682bbc
           imagePullPolicy: IfNotPresent
           ports:
@@ -30,9 +31,11 @@ metadata:
   labels:
     app.kubernetes.io/name: frontend
 spec:
+  type: NodePort
   selector:
     app.kubernetes.io/name: frontend
   ports:
     - protocol: TCP
       port: 8000
       targetPort: 8000
+      nodePort: 30000

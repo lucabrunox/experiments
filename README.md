@@ -38,7 +38,8 @@ Apply the plan which will create a K8s cluster:
 ```bash
 terraform apply \
   -var "region=$AWS_REGION" \
-  -var "asg_desired_capacity=1"
+  -var "asg_desired_capacity=1" \
+  -var "nlb_enabled=true"
 ```
 
 Use asg_desired_capacity=0 to tear down the cluster.
@@ -100,7 +101,7 @@ The GH also contains a job to push to ECR, which is not tested locally.
 
 ### Day 4: Deploy the Django app in K8s using the ECR image
 
-Commit: https://github.com/lucabrunox/learning/tree/e296b828cb5
+Commit: https://github.com/lucabrunox/learning/tree/5216dfe5efd6
 
 Needless to say that without EKS it's more complicated, but worth the learnings.
 
@@ -119,4 +120,20 @@ kubectl apply -f k8s/ecr-credentials.yaml
 kubectl apply -f frontend/k8s/manifest.yaml
 
 curl $(kubectl get svc frontend -o=jsonpath='{.spec.clusterIP}'):8000
+```
+
+### Day 5: Expose service via NLB and NodePort
+
+Publicly exposing the service via NLB learnings:
+- Allowed node ports only from 30000
+- NLB security group must be configured for each listener port
+- NLBs need at least 2 subnets for redundancy
+- Django has an ALLOWED_HOSTS config to prevent Host header attacks
+- Django detects a tty when logging to stdout
+
+```bash
+kubectl apply -f k8s/ecr-credentials.yaml
+kubectl apply -f frontend/k8s/manifest.yaml
+
+curl http://$(terraform output --raw learning_nlb_dns_name)
 ```
