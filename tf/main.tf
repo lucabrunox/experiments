@@ -152,11 +152,12 @@ resource "aws_security_group" "learning_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  // NLB
   ingress {
     from_port   = 30000
     to_port     = 30000
     protocol    = "tcp"
-    security_groups = [module.learning_nlb.security_group_id]
+    security_groups = module.learning_nlb.security_group_id != null ? [module.learning_nlb.security_group_id] : []
   }
 
   egress {
@@ -354,14 +355,6 @@ module "learning_github_oidc" {
 }
 
 /* Outputs */
-
-output "learning_github_oidc_role" {
-  value = module.learning_github_oidc.oidc_role
-}
-
-output "learning_ecr_frontend_repository_url" {
-  value = module.learning_ecr_frontend.repository_url
-}
 
 output "learning_nlb_dns_name" {
   value = module.learning_nlb.dns_name

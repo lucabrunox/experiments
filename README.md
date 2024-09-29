@@ -124,6 +124,8 @@ curl $(kubectl get svc frontend -o=jsonpath='{.spec.clusterIP}'):8000
 
 ### Day 5: Expose service via NLB and NodePort
 
+Commit: https://github.com/lucabrunox/learning/tree/f03d8449f869
+
 Publicly exposing the service via NLB learnings:
 - Allowed node ports only from 30000
 - NLB security group must be configured for each listener port
