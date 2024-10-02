@@ -10,10 +10,6 @@ function update_system() {
   yum update -y
 }
 
-function configure_etc_environment() {
-  echo 'PATH="$PATH:/usr/local/bin"' >> /etc/environment
-}
-
 function install_containerd() {
   yum install containerd -y
   systemctl enable containerd
@@ -64,7 +60,6 @@ function install_flannel() {
 }
 
 update_system
-configure_etc_environment
 install_containerd
 configure_netfilter
 install_kube_tools
