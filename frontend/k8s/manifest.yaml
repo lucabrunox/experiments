@@ -19,7 +19,7 @@ spec:
       containers:
         - name: frontend
           tty: true
-          image: MY_ACCOUNT.dkr.ecr.eu-west-1.amazonaws.com/learning-frontend:v29446ea079d6df7875c08c6641523f8e029caf37
+          image: MY_ACCOUNT.dkr.ecr.eu-west-1.amazonaws.com/experiments-frontend:v29446ea079d6df7875c08c6641523f8e029caf37
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8000

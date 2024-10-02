@@ -54,7 +54,7 @@ jobs:
 
       - name: Push to ECR
         env:
-          REPOSITORY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/learning-frontend
+          REPOSITORY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/experiments-frontend
           IMAGE_TAG: v${{ github.sha }}
         run: |
           docker load --input /tmp/frontend_image.tar
