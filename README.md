@@ -127,3 +127,16 @@ kubectl apply -f frontend/k8s/manifest.yaml
 
 curl http://$(terraform output --raw experiments_nlb_dns_name)
 ```
+
+### Day 6: Helm for the app
+
+Some notes:
+- Created the helm with the default helm create scaffolding.
+- Added container hostname to ALLOWED_HOSTS for the health checks.
+
+```bash
+kubectl apply -f k8s/ecr-credentials.yaml
+helm install --set-string image=ACCOUNT_ID.dkr.ecr.eu-west-1.amazonaws.com/experiments-frontend:vTAG frontend ./frontend/k8s/chart
+
+curl localhost:3000
+```
