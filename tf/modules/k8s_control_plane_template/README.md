@@ -1,0 +1,1 @@
+Self-contained EC2 launch template for K8s control plane nodes (currently just one node).

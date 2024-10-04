@@ -144,3 +144,9 @@ helm install --set-string image=ACCOUNT_ID.dkr.ecr.eu-west-1.amazonaws.com/exper
 
 curl http://$(terraform output --raw experiments_nlb_dns_name)
 ```
+
+## Day 7: Split into multiple files
+
+Created a self-contained k8s_control_plane_template module. Obviously, it's only a single node.
+
+For the rest I'm leaving them in the main module.
