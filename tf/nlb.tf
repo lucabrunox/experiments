@@ -3,7 +3,7 @@ module "experiments_nlb" {
   create = var.nlb_enabled
   load_balancer_type = "network"
   vpc_id = module.experiments_vpc.vpc_id
-  subnets = aws_autoscaling_group.experiments_k8s_cluster.vpc_zone_identifier
+  subnets = aws_autoscaling_group.experiments_k8s_control_plane.vpc_zone_identifier
   enable_deletion_protection = false
 
   listeners = [

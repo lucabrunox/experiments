@@ -29,7 +29,7 @@ module "k8s_control_plane_template" {
   repository_arns = [module.experiments_ecr_frontend.repository_arn]
 }
 
-resource "aws_autoscaling_group" "experiments_k8s_cluster" {
+resource "aws_autoscaling_group" "experiments_k8s_control_plane" {
   vpc_zone_identifier = module.experiments_vpc.public_subnets
   max_size = 1
   min_size = 0
@@ -43,6 +43,12 @@ resource "aws_autoscaling_group" "experiments_k8s_cluster" {
   launch_template {
     id      = module.k8s_control_plane_template.template_id
     version = module.k8s_control_plane_template.template_latest_version
+  }
+
+  tag {
+    key                 = "Name"
+    value               = "experiments_k8s_control_plane"
+    propagate_at_launch = true
   }
 }
 

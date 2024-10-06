@@ -1,10 +1,8 @@
 ## Experiments and random stuff
 
-This repo contains some notes about setting up K8s, ingresses and apps in a non-conventional way.
+This repo contains some notes about setting up K8s cluster on EC2+ECR without EKS to see how fast it can be. EKS can take between 10 and 15 minutes to boostrap a cluster.
 
-For example:
-- Using K8s on EC2 without EKS
-- Using a raw Nginx config without using K8s ingress.
+Below is a changelog of this repo.
 
 ### Day 1: Set up Terraform with a remote backend
 
@@ -147,6 +145,20 @@ curl http://$(terraform output --raw experiments_nlb_dns_name)
 
 ## Day 7: Split into multiple files
 
+Commit: https://github.com/lucabrunox/experiments/tree/c6db952745cd9f
+
 Created a self-contained k8s_control_plane_template module. Obviously, it's only a single node.
 
 For the rest I'm leaving them in the main module.
+
+## Day 8: Easier way to access node and kubectl
+
+Until now, we've been manually getting the EC2 IP and then using admin.conf as root. With this change instead we tag the k8s node instance, and give ec2-user admin access so that we can ssh and run kubectl commands straightaway.
+
+An interesting note is that `kubectl certificate approve` has a delay, hence we must wait for the certificate to be ready first.
+
+```bash
+ssh ec2-user@$(aws ec2 describe-instances --filters "Name=instance-state-name,Values=running" --filters "Name=tag-key,Values=Name" "Name=tag-value,Values=experiments_k8s_control_plane" --query 'Reservations[].Instances[].PublicIpAddress' --output text)
+
+kubectl get all -A
+```
